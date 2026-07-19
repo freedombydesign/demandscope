@@ -153,8 +153,23 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Expansion failed');
+        // Handle timeout errors specifically
+        if (res.status === 504) {
+          throw new Error('Expansion timed out. Try fewer seeds (1-2) or use a single mode (YouTube or Google only).');
+        }
+        // Try to parse error JSON, but handle HTML error pages
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const error = await res.json();
+          throw new Error(error.error || 'Expansion failed');
+        }
+        throw new Error(`Server error (${res.status}). Try fewer seeds or a single mode.`);
+      }
+
+      // Verify response is JSON before parsing
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid server response. Please try again.');
       }
 
       const data = await res.json();

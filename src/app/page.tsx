@@ -191,6 +191,39 @@ export default function Home() {
     }
   };
 
+  // Add manual keywords
+  const handleManualAdd = async (keywords: string[]) => {
+    if (!currentProject) {
+      alert('Please create or select a project first');
+      return;
+    }
+
+    try {
+      const keywordsToAdd = keywords.map(keyword => ({
+        keyword,
+        source: 'manual' as const,
+        variant_count: 1,
+      }));
+
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'add-keywords',
+          projectId: currentProject.id,
+          keywords: keywordsToAdd,
+        }),
+      });
+
+      if (res.ok) {
+        await loadProjectKeywords(currentProject.id);
+      }
+    } catch (e) {
+      console.error('Failed to add keywords:', e);
+      alert('Failed to add keywords');
+    }
+  };
+
   // Score keywords (YouTube API)
   const handleScore = async (keywordsToScore: Keyword[]) => {
     setIsScoring(true);
@@ -350,6 +383,7 @@ export default function Home() {
 
                 <ExpansionForm
                   onExpand={handleExpand}
+                  onManualAdd={handleManualAdd}
                   isExpanding={isExpanding}
                   progress={expandProgress}
                 />

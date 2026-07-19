@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { expandKeyword, getSource } from '@/lib/autocomplete';
 import type { Geo, Mode } from '@/types';
 
+// Extend timeout for this route (Vercel Pro: up to 300s, Hobby: 10s max)
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

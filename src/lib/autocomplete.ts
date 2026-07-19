@@ -10,9 +10,9 @@ const QUESTION_MODIFIERS = [
 // A-Z letters for expansion
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
-// Rate limit: 200-400ms randomized delay between requests
+// Rate limit: 100-200ms randomized delay between requests
 function randomDelay(): Promise<void> {
-  const ms = 200 + Math.random() * 200;
+  const ms = 100 + Math.random() * 100;
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 

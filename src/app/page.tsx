@@ -93,6 +93,26 @@ export default function Home() {
     }
   };
 
+  // Rename project
+  const handleRenameProject = async (projectId: string, name: string) => {
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'rename', projectId, name }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setProjects(prev => prev.map(p => p.id === projectId ? updated : p));
+        if (currentProject?.id === projectId) {
+          setCurrentProject(updated);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to rename project:', e);
+    }
+  };
+
   // Export project
   const handleExportProject = async (projectId: string) => {
     try {
@@ -308,6 +328,7 @@ export default function Home() {
               currentProject={currentProject}
               onSelect={setCurrentProject}
               onCreate={handleCreateProject}
+              onRename={handleRenameProject}
               onDelete={handleDeleteProject}
               onExport={handleExportProject}
             />

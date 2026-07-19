@@ -73,6 +73,23 @@ export async function deleteProject(id: string): Promise<void> {
 }
 
 /**
+ * Rename a project
+ */
+export async function renameProject(id: string, name: string): Promise<Project> {
+  const supabase = createServerClient();
+
+  const { data, error } = await supabase
+    .from('ds_projects')
+    .update({ name })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to rename project: ${error.message}`);
+  return data;
+}
+
+/**
  * Add keywords to a project
  */
 export async function addKeywords(

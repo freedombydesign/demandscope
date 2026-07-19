@@ -8,6 +8,7 @@ interface ProjectSelectorProps {
   currentProject: Project | null;
   onSelect: (project: Project) => void;
   onCreate: (name: string, mode: Mode, geo: Geo) => void;
+  onRename: (projectId: string, name: string) => void;
   onDelete: (projectId: string) => void;
   onExport: (projectId: string) => void;
 }
@@ -17,6 +18,7 @@ export default function ProjectSelector({
   currentProject,
   onSelect,
   onCreate,
+  onRename,
   onDelete,
   onExport,
 }: ProjectSelectorProps) {
@@ -24,6 +26,8 @@ export default function ProjectSelector({
   const [newName, setNewName] = useState('');
   const [newMode, setNewMode] = useState<Mode>('both');
   const [newGeo, setNewGeo] = useState<Geo>('CA');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +35,24 @@ export default function ProjectSelector({
     onCreate(newName.trim(), newMode, newGeo);
     setNewName('');
     setShowCreate(false);
+  };
+
+  const startEditing = (project: Project) => {
+    setEditingId(project.id);
+    setEditName(project.name);
+  };
+
+  const handleRename = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim() || !editingId) return;
+    onRename(editingId, editName.trim());
+    setEditingId(null);
+    setEditName('');
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditName('');
   };
 
   return (
@@ -85,40 +107,81 @@ export default function ProjectSelector({
                   ? 'bg-[var(--accent)] bg-opacity-20 border border-[var(--accent)]'
                   : 'bg-[var(--background)] hover:bg-[var(--card-hover)]'
               }`}
-              onClick={() => onSelect(project)}
+              onClick={() => editingId !== project.id && onSelect(project)}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{project.name}</div>
-                  <div className="text-xs text-[var(--muted)]">
-                    {project.mode} · {project.geo}
-                  </div>
-                </div>
-                {currentProject?.id === project.id && (
+              {editingId === project.id ? (
+                <form onSubmit={handleRename} className="space-y-2">
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    autoFocus
+                    onClick={e => e.stopPropagation()}
+                    className="w-full text-sm"
+                  />
                   <div className="flex gap-2">
                     <button
+                      type="submit"
                       className="text-xs text-[var(--accent)] hover:underline"
-                      onClick={e => {
-                        e.stopPropagation();
-                        onExport(project.id);
-                      }}
+                      onClick={e => e.stopPropagation()}
                     >
-                      Export
+                      Save
                     </button>
                     <button
-                      className="text-xs text-[var(--danger)] hover:underline"
+                      type="button"
+                      className="text-xs text-[var(--muted)] hover:underline"
                       onClick={e => {
                         e.stopPropagation();
-                        if (confirm('Delete this project?')) {
-                          onDelete(project.id);
-                        }
+                        cancelEditing();
                       }}
                     >
-                      Delete
+                      Cancel
                     </button>
                   </div>
-                )}
-              </div>
+                </form>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{project.name}</div>
+                    <div className="text-xs text-[var(--muted)]">
+                      {project.mode} · {project.geo}
+                    </div>
+                  </div>
+                  {currentProject?.id === project.id && (
+                    <div className="flex gap-2">
+                      <button
+                        className="text-xs text-[var(--muted)] hover:underline"
+                        onClick={e => {
+                          e.stopPropagation();
+                          startEditing(project);
+                        }}
+                      >
+                        Rename
+                      </button>
+                      <button
+                        className="text-xs text-[var(--accent)] hover:underline"
+                        onClick={e => {
+                          e.stopPropagation();
+                          onExport(project.id);
+                        }}
+                      >
+                        Export
+                      </button>
+                      <button
+                        className="text-xs text-[var(--danger)] hover:underline"
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (confirm('Delete this project?')) {
+                            onDelete(project.id);
+                          }
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))
         )}

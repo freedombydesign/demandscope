@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createProject, getProjects, deleteProject, addKeywords, exportToCSV, getProject } from '@/lib/projects';
+import { createProject, getProjects, deleteProject, renameProject, addKeywords, exportToCSV, getProject } from '@/lib/projects';
 import type { Mode, Geo, KeywordSource } from '@/types';
 
 // GET /api/projects - List all projects
@@ -69,6 +69,20 @@ export async function POST(request: NextRequest) {
 
       const added = await addKeywords(projectId, keywords);
       return NextResponse.json({ added: added.length, keywords: added });
+    }
+
+    if (action === 'rename') {
+      const { projectId, name } = body as { action: 'rename'; projectId: string; name: string };
+
+      if (!projectId || !name) {
+        return NextResponse.json(
+          { error: 'ProjectId and name are required' },
+          { status: 400 }
+        );
+      }
+
+      const project = await renameProject(projectId, name);
+      return NextResponse.json(project);
     }
 
     if (action === 'export') {

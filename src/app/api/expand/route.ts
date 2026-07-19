@@ -62,18 +62,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Merge and dedupe all suggestions
-    const allSuggestions = new Set<string>();
+    // Merge and count how many times each keyword appears (demand signal)
+    const keywordCounts = new Map<string, number>();
     for (const result of results) {
       for (const suggestion of result.suggestions) {
-        allSuggestions.add(suggestion);
+        keywordCounts.set(suggestion, (keywordCounts.get(suggestion) || 0) + 1);
       }
     }
 
+    // Convert to array with counts
+    const keywordsWithCounts = Array.from(keywordCounts.entries())
+      .map(([keyword, count]) => ({ keyword, variant_count: count }))
+      .sort((a, b) => b.variant_count - a.variant_count); // Sort by count desc
+
     return NextResponse.json({
       results,
-      totalUnique: allSuggestions.size,
-      allSuggestions: Array.from(allSuggestions).sort(),
+      totalUnique: keywordCounts.size,
+      allSuggestions: keywordsWithCounts.map(k => k.keyword), // For backwards compat
+      keywordsWithCounts, // New field with counts
     });
   } catch (error) {
     console.error('Expand error:', error);

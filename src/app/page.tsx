@@ -140,12 +140,14 @@ export default function Home() {
       const data = await res.json();
       setExpandProgress(`Found ${data.totalUnique} unique keywords. Saving...`);
 
-      // Add keywords to project
-      const keywordsToAdd = data.allSuggestions.map((kw: string) => ({
-        keyword: kw,
-        source: mode === 'youtube' ? 'youtube_ac' : 'google_ac',
-        variant_count: 1, // Will be updated with actual count
-      }));
+      // Add keywords to project with actual variant counts
+      const keywordsToAdd = (data.keywordsWithCounts || data.allSuggestions.map((kw: string) => ({ keyword: kw, variant_count: 1 }))).map(
+        (item: { keyword: string; variant_count: number } | string) => ({
+          keyword: typeof item === 'string' ? item : item.keyword,
+          source: mode === 'youtube' ? 'youtube_ac' : 'google_ac',
+          variant_count: typeof item === 'string' ? 1 : item.variant_count,
+        })
+      );
 
       const addRes = await fetch('/api/projects', {
         method: 'POST',

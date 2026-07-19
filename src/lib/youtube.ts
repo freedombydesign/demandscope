@@ -132,24 +132,28 @@ export async function searchYouTube(keyword: string): Promise<YouTubeSearchResul
 /**
  * Calculate opportunity score for a keyword
  *
- * FORMULA (tunable via constants):
+ * FORMULA (v2 - demand-weighted):
  *
  * Demand signals (higher = better):
- *   - autocomplete_variants: More variants = more search variations
- *   - avg_top10_views: Higher views = more demand
+ *   - autocomplete_variants: More variants = more search demand
+ *     LOW VARIANTS = LOW DEMAND = SCORE PENALTY
+ *   - avg_top10_views: Higher views = more interest
  *
  * Competition signals (higher = worse):
  *   - videos_last_12mo: More recent videos = more competition
  *   - median_top3_views: Higher top views = harder to compete
  *
- * Score = 50 + (demand - competition), clamped to 0-100
+ * Key insight: Low competition + Low demand = BAD (dead topic)
+ *              Low competition + High demand = GOOD (opportunity)
  *
  * Weights can be adjusted below:
  */
 const SCORE_WEIGHTS = {
-  VARIANT_WEIGHT: 2,           // Points per autocomplete variant
-  AVG_VIEWS_DIVISOR: 10000,    // Divide avg views by this
-  RECENT_VIDEO_WEIGHT: 5,      // Penalty per video in last 12mo
+  VARIANT_WEIGHT: 8,           // Points per autocomplete variant (was 2)
+  LOW_VARIANT_PENALTY: 25,     // Penalty if variants < threshold
+  LOW_VARIANT_THRESHOLD: 3,    // Variants below this = penalty
+  AVG_VIEWS_DIVISOR: 15000,    // Divide avg views by this
+  RECENT_VIDEO_WEIGHT: 4,      // Penalty per video in last 12mo
   TOP3_VIEWS_DIVISOR: 50000,   // Divide median top3 views by this
 };
 
@@ -161,18 +165,23 @@ export function calculateOpportunityScore(inputs: OpportunityScoreInputs): numbe
     medianTop3Views,
   } = inputs;
 
-  // Demand score
+  // Demand score - variants are now heavily weighted
   const variantScore = autocompleteVariants * SCORE_WEIGHTS.VARIANT_WEIGHT;
   const viewsScore = avgTop10Views / SCORE_WEIGHTS.AVG_VIEWS_DIVISOR;
   const demand = variantScore + viewsScore;
+
+  // Low demand penalty - if few variants, this is likely a dead topic
+  const lowDemandPenalty = autocompleteVariants < SCORE_WEIGHTS.LOW_VARIANT_THRESHOLD
+    ? SCORE_WEIGHTS.LOW_VARIANT_PENALTY
+    : 0;
 
   // Competition score
   const recentCompetition = videosLast12Months * SCORE_WEIGHTS.RECENT_VIDEO_WEIGHT;
   const topChannelCompetition = medianTop3Views / SCORE_WEIGHTS.TOP3_VIEWS_DIVISOR;
   const competition = recentCompetition + topChannelCompetition;
 
-  // Final score
-  const rawScore = 50 + (demand - competition);
+  // Final score: demand - competition - low demand penalty
+  const rawScore = 50 + (demand - competition) - lowDemandPenalty;
   return Math.max(0, Math.min(100, Math.round(rawScore)));
 }
 

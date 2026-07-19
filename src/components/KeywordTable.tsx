@@ -16,6 +16,7 @@ interface KeywordTableProps {
 
 type SortField = 'keyword' | 'opportunity_score' | 'variant_count' | 'volume';
 type SortDirection = 'asc' | 'desc';
+type SourceFilter = 'all' | 'youtube_ac' | 'google_ac' | 'manual';
 
 function getScoreClass(score: number | null): string {
   if (score === null) return '';
@@ -36,10 +37,17 @@ export default function KeywordTable({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>('opportunity_score');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
+
+  // Filter keywords by source
+  const filteredKeywords = useMemo(() => {
+    if (sourceFilter === 'all') return keywords;
+    return keywords.filter(k => k.source === sourceFilter);
+  }, [keywords, sourceFilter]);
 
   // Sort keywords
   const sortedKeywords = useMemo(() => {
-    return [...keywords].sort((a, b) => {
+    return [...filteredKeywords].sort((a, b) => {
       let aVal: number | string = 0;
       let bVal: number | string = 0;
 
@@ -72,7 +80,7 @@ export default function KeywordTable({
         ? (aVal as number) - (bVal as number)
         : (bVal as number) - (aVal as number);
     });
-  }, [keywords, sortField, sortDirection]);
+  }, [filteredKeywords, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -84,10 +92,10 @@ export default function KeywordTable({
   };
 
   const handleSelectAll = () => {
-    if (selected.size === keywords.length) {
+    if (selected.size === filteredKeywords.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(keywords.map(k => k.id)));
+      setSelected(new Set(filteredKeywords.map(k => k.id)));
     }
   };
 
@@ -115,8 +123,18 @@ export default function KeywordTable({
       {/* Actions bar */}
       <div className="flex items-center justify-between mb-4 p-3 bg-[var(--card)] rounded-lg border border-[var(--border)]">
         <div className="flex items-center gap-4">
+          <select
+            value={sourceFilter}
+            onChange={e => setSourceFilter(e.target.value as SourceFilter)}
+            className="text-sm py-1 px-2"
+          >
+            <option value="all">All Sources ({keywords.length})</option>
+            <option value="youtube_ac">YouTube ({keywords.filter(k => k.source === 'youtube_ac').length})</option>
+            <option value="google_ac">Google ({keywords.filter(k => k.source === 'google_ac').length})</option>
+            <option value="manual">Manual ({keywords.filter(k => k.source === 'manual').length})</option>
+          </select>
           <span className="text-sm text-[var(--muted)]">
-            {selected.size} of {keywords.length} selected
+            {selected.size} of {filteredKeywords.length} selected
           </span>
           {selected.size > 0 && (
             <>
@@ -168,7 +186,7 @@ export default function KeywordTable({
               <th className="w-10">
                 <input
                   type="checkbox"
-                  checked={selected.size === keywords.length && keywords.length > 0}
+                  checked={selected.size === filteredKeywords.length && filteredKeywords.length > 0}
                   onChange={handleSelectAll}
                 />
               </th>
@@ -252,9 +270,11 @@ export default function KeywordTable({
           </tbody>
         </table>
 
-        {keywords.length === 0 && (
+        {filteredKeywords.length === 0 && (
           <div className="text-center py-8 text-[var(--muted)]">
-            No keywords yet. Run an expansion to get started.
+            {keywords.length === 0
+              ? 'No keywords yet. Run an expansion to get started.'
+              : 'No keywords match this filter.'}
           </div>
         )}
       </div>
